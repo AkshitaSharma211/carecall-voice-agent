@@ -1,0 +1,4 @@
+backend/clinic.db
+venv/
+backend/venv/
+.env
