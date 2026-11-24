@@ -2,3 +2,16 @@ backend/clinic.db
 venv/
 backend/venv/
 .env
+backend/.env
+backend/.venv/
+node_modules/
+**/__pycache__/
+*.py[cod]
+run.log
+backend/run.log
+.env
+.venv/
+run.log
+clinic.db
+node_modules/
+__pycache__/
