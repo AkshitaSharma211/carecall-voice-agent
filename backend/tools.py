@@ -1,10 +1,14 @@
 from db import conn
 
-INVALID_PHONE = {
-    "success": False,
-    "error": "invalid_phone",
-    "message": "Ask the caller to repeat their 10-digit mobile number.",
-}
+def phone_error(raw):
+    digits = "".join(ch for ch in (raw or "") if ch.isdigit())
+    body = digits[2:] if digits.startswith("91") and len(digits) > 10 else digits
+    if len(body) == 10:
+        why = "Indian mobile numbers start with 6, 7, 8 or 9."
+    else:
+        why = f"It had {len(body)} digits; a valid number has exactly 10 after +91."
+    return {"success": False, "error": "invalid_phone",
+            "message": f"Invalid phone number. {why} Tell the caller exactly that, then ask them to say the full number again."}
 
 def clean_phone(p):
     digits = "".join(ch for ch in (p or "") if ch.isdigit())
@@ -46,9 +50,10 @@ def check_doctor_availability(speciality: str = None, doctor_name: str = None, d
     return {"slots": rows}
 
 def book_appointment(slot_id: int, phone: str, patient_name: str = "Caller"):
-    phone = clean_phone(phone)
+    raw = phone
+    phone = clean_phone(raw)
     if phone is None:
-        return dict(INVALID_PHONE)
+        return phone_error(raw)
     c = conn()
     try:
         existing = c.execute(
@@ -76,9 +81,10 @@ def book_appointment(slot_id: int, phone: str, patient_name: str = "Caller"):
         c.close()
 
 def cancel_appointment(phone: str):
-    phone = clean_phone(phone)
+    raw = phone
+    phone = clean_phone(raw)
     if phone is None:
-        return dict(INVALID_PHONE)
+        return phone_error(raw)
     c = conn()
     try:
         appt = c.execute("""SELECT id, slot_id FROM appointments
