@@ -1,7 +1,8 @@
 import os
 import datetime
 from typing import Optional
-
+import certifi
+os.environ.setdefault("SSL_CERT_FILE", certifi.where())
 import aiohttp
 from dotenv import load_dotenv
 from loguru import logger
@@ -21,7 +22,7 @@ from pipecat.processors.aggregators.llm_response_universal import (
 )
 from pipecat.services.elevenlabs.stt import ElevenLabsSTTService
 from pipecat.services.elevenlabs.tts import ElevenLabsTTSService
-from pipecat.services.google.llm import GoogleLLMService
+from pipecat.services.openai.llm import OpenAILLMService
 from pipecat.services.llm_service import FunctionCallParams
 
 import tools as t
@@ -38,12 +39,12 @@ Your replies are spoken aloud: short sentences, no lists, no emojis.
 You can check availability, book, and cancel appointments using your tools.
 Rules:
 - Identify the caller only by the phone number they say. Before booking or cancelling, read the number back digit by digit and wait for a clear yes.
-- Convert spoken number words such as "zero" into digits, and pass phone numbers to tools as digits only (use +91 followed by 10 digits for Indian mobile numbers).
 - Only offer slots returned by the availability tool. Never invent slots. Never say slot ids aloud.
 - Say dates and times naturally, for example "tomorrow at 11 AM".
 - Convert dates the caller says (like "tomorrow") into YYYY-MM-DD before calling a tool.
 - If a tool returns an error message, follow its instruction and tell the caller in plain words.
-- After booking or cancelling, confirm the doctor, date and time."""
+- After booking or cancelling, confirm the doctor, date and time.
+- When you call a tool, pass the phone number as digits only, like +919876543210, converting spoken words such as "zero" into digits."""
 
 
 # ---- tools: thin wrappers the LLM can call; the real logic lives in tools.py ----
@@ -102,16 +103,18 @@ async def run_bot(transport, runner_args: RunnerArguments):
             voice=os.getenv("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM"),
         ),
     )
-    llm = GoogleLLMService(  # the one service to swap if Gemini keeps failing
-        api_key=os.getenv("GOOGLE_API_KEY"),
-        settings=GoogleLLMService.Settings(
-            model=os.getenv("GEMINI_MODEL", "gemini-2.5-flash"),
-            system_instruction=make_prompt(),
+    # Any OpenAI-compatible provider (Groq, Cerebras, OpenRouter): change only .env
+    llm = OpenAILLMService(
+        api_key=os.getenv("LLM_API_KEY"),
+        base_url=os.getenv("LLM_BASE_URL", "https://api.groq.com/openai/v1"),
+        settings=OpenAILLMService.Settings(
+            model=os.getenv("LLM_MODEL", "llama-3.3-70b-versatile"),
         ),
     )
 
     context = LLMContext(
-        tools=[check_doctor_availability, book_appointment, cancel_appointment]
+        messages=[{"role": "system", "content": make_prompt()}],
+        tools=[check_doctor_availability, book_appointment, cancel_appointment],
     )
     user_aggregator, assistant_aggregator = LLMContextAggregatorPair(
         context,
@@ -135,7 +138,7 @@ async def run_bot(transport, runner_args: RunnerArguments):
     @worker.rtvi.event_handler("on_client_ready")
     async def on_client_ready(rtvi):
         context.add_message(
-            {"role": "developer", "content": "Greet the caller briefly and ask how you can help."}
+            {"role": "user", "content": "Greet the caller briefly and ask how you can help."}
         )
         await worker.queue_frames([LLMRunFrame()])
 
