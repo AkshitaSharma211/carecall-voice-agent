@@ -15,3 +15,5 @@ run.log
 clinic.db
 node_modules/
 __pycache__/
+
+dist/
