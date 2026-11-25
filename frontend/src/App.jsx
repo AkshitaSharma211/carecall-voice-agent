@@ -144,7 +144,7 @@ export default function App() {
           {phase === "idle" && (<div className="center">
             <h1>CareCall</h1>
             <p className="muted">Book or cancel an appointment by voice.</p>
-            <button className="go" onClick={start}>Try call</button>
+            <button className="go" onClick={start}>Try Call</button>
           </div>)}
           {phase === "ringing" && (<div className="center">
             <div className="pulse" /><h2>CareCall</h2>
