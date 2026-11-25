@@ -34,7 +34,7 @@ def check_doctor_availability(speciality: str = None, doctor_name: str = None, d
            FROM slots s JOIN doctors d ON d.id = s.doctor_id WHERE s.booked = 0"""
     args = []
     if speciality:
-        q += " AND LOWER(d.speciality) LIKE ?"; args.append(f"%{speciality.lower()}%")
+        q += " AND LOWER(d.speciality) LIKE ?"; args.append(f"%{speciality.lower()[:5]}%")
     if doctor_name:
         q += " AND LOWER(d.name) LIKE ?"; args.append(f"%{doctor_name.lower()}%")
     if date:
